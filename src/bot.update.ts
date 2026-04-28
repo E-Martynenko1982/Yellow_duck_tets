@@ -120,7 +120,7 @@ export class BotUpdate {
         },
         body: JSON.stringify({
           jql: jql,
-          maxResults: 0,
+          maxResults: 1,
           fields: ['status'],
         }),
       });
