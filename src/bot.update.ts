@@ -100,10 +100,14 @@ export class BotUpdate {
     const email = this.configService.get<string>('JIRA_EMAIL');
     const token = this.configService.get<string>('JIRA_API_TOKEN');
 
-    const jql = `assignee = '${assignee}' AND status IN ('In Progress', 'Ready for QA', 'IN PROGRESS', 'READY FOR QA')`;
-    console.log('JQL Query:', jql);
-    const url = `https://${domain}.atlassian.net/rest/api/3/search?jql=${encodeURIComponent(jql)}`;
-    console.log('Full URL:', url);
+    if (!domain) return 0;
+
+    const jql = `assignee = '${assignee}' AND status IN ('In Progress', 'IN PROGRESS', 'Ready for QA', 'READY FOR QA')`;
+
+    const baseUrl = domain.includes('atlassian.net')
+      ? domain
+      : `${domain}.atlassian.net`;
+    const url = `https://${baseUrl}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}`;
 
     try {
       const response = await fetch(url, {
@@ -112,7 +116,9 @@ export class BotUpdate {
           Accept: 'application/json',
         },
       });
+
       const data = (await response.json()) as { total?: number };
+
       return data.total ?? 0;
     } catch (error) {
       console.error('Jira API Error:', error);
