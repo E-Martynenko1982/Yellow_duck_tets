@@ -1,0 +1,5 @@
+1) установка nest -
+yarn add
+ telegraf
+ nestjs-telegraf
+ telegraf-session-local(для зберігання стану)
