@@ -96,19 +96,17 @@ export class BotUpdate {
   }
 
   private async getJiraTasks(assignee: string): Promise<number> {
-    const domain = this.configService.get<string>('JIRA_DOMAIN');
+    const domain = this.configService.get<string>('JIRA_DOMAIN') ?? '';
     const email = this.configService.get<string>('JIRA_EMAIL');
     const token = this.configService.get<string>('JIRA_API_TOKEN');
 
-    const baseUrl = domain
-      ? domain.includes('atlassian.net')
-        ? domain
-        : `${domain}.atlassian.net`
-      : '';
-
+    const baseUrl = domain.includes('atlassian.net')
+      ? domain
+      : `${domain}.atlassian.net`;
     const url = `https://${baseUrl}/rest/api/3/search/jql`;
 
-    const jql = `assignee ~ '${assignee}' AND status IN ('In Progress', 'Ready for qa', 'Ready for QA')`;
+    const jql = `assignee ~ "${assignee}" AND status IN ("In Progress", "Ready for qa", "Ready for QA", "READY FOR QA")`;
+
     try {
       const response = await fetch(url, {
         method: 'POST',
@@ -119,30 +117,34 @@ export class BotUpdate {
         },
         body: JSON.stringify({
           jql: jql,
-          maxResults: 100,
+          maxResults: 50,
           fields: ['status'],
         }),
       });
 
       const data = (await response.json()) as {
+        total?: number;
         issues?: any[];
         errorMessages?: string[];
-        warningMessages?: string[];
       };
 
-      console.log(`Jira Response for ${assignee}:`, JSON.stringify(data));
+      console.log(`🔍 Трасування для ${assignee}:`, JSON.stringify(data));
 
       if (data.errorMessages && data.errorMessages.length > 0) {
-        console.error('Jira API Error:', data.errorMessages);
+        console.error('Помилка Jira:', data.errorMessages);
         return 0;
       }
 
-      const taskCount = data.issues ? data.issues.length : 0;
+      const count: number =
+        data.total !== undefined
+          ? data.total
+          : data.issues
+            ? data.issues.length
+            : 0;
 
-      console.log(`Реальна кількість задач для ${assignee}: ${taskCount}`);
-      return taskCount;
+      return count;
     } catch (error) {
-      console.error('Network Error:', error);
+      console.error('Помилка мережі:', error);
       return 0;
     }
   }
