@@ -14,6 +14,9 @@ export class User {
   @Column({ nullable: true })
   jiraEmail: string;
 
+  @Column({ nullable: true })
+  jiraName: string;
+
   @Column({ default: false })
   isPm: boolean;
 }

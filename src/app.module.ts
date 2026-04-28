@@ -39,6 +39,7 @@ import { User } from './users/user.entity';
       inject: [ConfigService],
     }),
 
+    TypeOrmModule.forFeature([User]),
   ],
   controllers: [AppController, JiraController],
   providers: [AppService, BotUpdate],

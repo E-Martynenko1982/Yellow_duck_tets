@@ -1,16 +1,37 @@
 import { Update, Start, Hears, Command, Ctx } from 'nestjs-telegraf';
 import { Context } from 'telegraf';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from './users/user.entity';
 
 @Update()
 export class BotUpdate {
-  private userMapping: Record<number, { jiraName: string; tgName: string }> =
-    {};
-
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+  ) {}
 
   @Start()
   async onStart(@Ctx() ctx: Context) {
+    const from = ctx.from;
+    if (!from) return;
+
+    const existing = await this.userRepository.findOne({
+      where: { telegramId: from.id.toString() },
+    });
+
+    if (!existing) {
+      await this.userRepository.save(
+        this.userRepository.create({
+          telegramId: from.id.toString(),
+          firstName: from.first_name,
+          username: from.username,
+        }),
+      );
+    }
+
     await ctx.reply(
       'Hello! I am a Jira bot.\n\n1. Use `/link First Last` to link your Jira account.\n2. Press the "Report" button to see the team status.',
       {
@@ -36,7 +57,15 @@ export class BotUpdate {
       );
     }
 
-    this.userMapping[from.id] = { jiraName, tgName: from.first_name };
+    await this.userRepository.upsert(
+      {
+        telegramId: from.id.toString(),
+        firstName: from.first_name,
+        username: from.username,
+        jiraName,
+      },
+      ['telegramId'],
+    );
 
     await ctx.reply(
       `Done! ${from.first_name}, your Telegram is linked to Jira account: **${jiraName}**`,
@@ -47,18 +76,20 @@ export class BotUpdate {
   async onReport(@Ctx() ctx: Context) {
     await ctx.reply('Fetching data from Jira...');
 
-    let report = '**Team workload:**\n\n';
-    const mappedUsers = Object.values(this.userMapping);
+    const users = await this.userRepository.find();
+    const linkedUsers = users.filter((u) => u.jiraName);
 
-    if (mappedUsers.length === 0) {
+    if (linkedUsers.length === 0) {
       return ctx.reply(
         'No members have linked their accounts yet. Use `/link`.',
       );
     }
 
-    for (const user of mappedUsers) {
+    let report = '**Team workload:**\n\n';
+
+    for (const user of linkedUsers) {
       const count = await this.getJiraTasks(user.jiraName);
-      report += `**${user.jiraName}** (${user.tgName})\n- In progress: **${count}** tasks\n\n`;
+      report += `**${user.jiraName}** (${user.firstName})\n- In progress: **${count}** tasks\n\n`;
     }
 
     await ctx.reply(report, { parse_mode: 'Markdown' });
