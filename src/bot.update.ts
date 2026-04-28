@@ -100,28 +100,44 @@ export class BotUpdate {
     const email = this.configService.get<string>('JIRA_EMAIL');
     const token = this.configService.get<string>('JIRA_API_TOKEN');
 
-    if (!domain) return 0;
+    const baseUrl = domain
+      ? domain.includes('atlassian.net')
+        ? domain
+        : `${domain}.atlassian.net`
+      : '';
 
-    const jql = `assignee = '${assignee}' AND status IN ('In Progress', 'IN PROGRESS', 'Ready for QA', 'READY FOR QA')`;
+    const url = `https://${baseUrl}/rest/api/3/search/jql`;
 
-    const baseUrl = domain.includes('atlassian.net')
-      ? domain
-      : `${domain}.atlassian.net`;
-    const url = `https://${baseUrl}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}`;
+    const jql = `assignee = '${assignee}' AND status IN ('In Progress', 'IN PROGRESS', 'Ready for QA', 'READY FOR QA', 'Ready for qa')`;
 
     try {
       const response = await fetch(url, {
+        method: 'POST',
         headers: {
           Authorization: `Basic ${Buffer.from(`${email}:${token}`).toString('base64')}`,
           Accept: 'application/json',
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          jql: jql,
+          maxResults: 0,
+          fields: ['status'],
+        }),
       });
 
-      const data = (await response.json()) as { total?: number };
+      const data = (await response.json()) as {
+        total?: number;
+        errorMessages?: string[];
+      };
+
+      if (data.errorMessages) {
+        console.error('❌ Jira API Error:', data.errorMessages);
+        return 0;
+      }
 
       return data.total ?? 0;
     } catch (error) {
-      console.error('Jira API Error:', error);
+      console.error('❌ Network Error:', error);
       return 0;
     }
   }
