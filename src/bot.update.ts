@@ -108,8 +108,7 @@ export class BotUpdate {
 
     const url = `https://${baseUrl}/rest/api/3/search/jql`;
 
-    const jql = `assignee = '${assignee}' AND status IN ('In Progress', 'IN PROGRESS', 'Ready for QA', 'READY FOR QA', 'Ready for qa')`;
-
+    const jql = `assignee ~ '${assignee}' AND status IN ('In Progress', 'Ready for qa', 'Ready for QA')`;
     try {
       const response = await fetch(url, {
         method: 'POST',
@@ -120,13 +119,13 @@ export class BotUpdate {
         },
         body: JSON.stringify({
           jql: jql,
-          maxResults: 1,
+          maxResults: 100,
           fields: ['status'],
         }),
       });
 
       const data = (await response.json()) as {
-        issues?: any[]; 
+        issues?: any[];
         errorMessages?: string[];
         warningMessages?: string[];
       };
@@ -140,7 +139,7 @@ export class BotUpdate {
 
       const taskCount = data.issues ? data.issues.length : 0;
 
-      console.log(`Found tasks: ${taskCount}`);
+      console.log(`Реальна кількість задач для ${assignee}: ${taskCount}`);
       return taskCount;
     } catch (error) {
       console.error('Network Error:', error);
