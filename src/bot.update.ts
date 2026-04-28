@@ -126,7 +126,7 @@ export class BotUpdate {
       });
 
       const data = (await response.json()) as {
-        total?: number;
+        issues?: any[]; 
         errorMessages?: string[];
         warningMessages?: string[];
       };
@@ -138,12 +138,10 @@ export class BotUpdate {
         return 0;
       }
 
-      if (data.warningMessages && data.warningMessages.length > 0) {
-        console.warn('Jira API Warning:', data.warningMessages);
-      }
+      const taskCount = data.issues ? data.issues.length : 0;
 
-      console.log(`Found tasks: ${data.total}`);
-      return data.total ?? 0;
+      console.log(`Found tasks: ${taskCount}`);
+      return taskCount;
     } catch (error) {
       console.error('Network Error:', error);
       return 0;
