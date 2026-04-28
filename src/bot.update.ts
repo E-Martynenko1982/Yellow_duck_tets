@@ -100,8 +100,10 @@ export class BotUpdate {
     const email = this.configService.get<string>('JIRA_EMAIL');
     const token = this.configService.get<string>('JIRA_API_TOKEN');
 
-    const jql = `assignee = "${assignee}" AND status IN ("In Progress", "Ready for qa")`;
+    const jql = `assignee = '${assignee}' AND status IN ('In Progress', 'Ready for QA', 'IN PROGRESS', 'READY FOR QA')`;
+    console.log('JQL Query:', jql);
     const url = `https://${domain}.atlassian.net/rest/api/3/search?jql=${encodeURIComponent(jql)}`;
+    console.log('Full URL:', url);
 
     try {
       const response = await fetch(url, {
