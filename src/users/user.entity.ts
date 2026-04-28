@@ -13,6 +13,7 @@ export class User {
 
   @Column({ nullable: true })
   jiraEmail: string;
+
   @Column({ default: false })
   isPm: boolean;
 }
