@@ -128,16 +128,24 @@ export class BotUpdate {
       const data = (await response.json()) as {
         total?: number;
         errorMessages?: string[];
+        warningMessages?: string[];
       };
 
-      if (data.errorMessages) {
-        console.error('❌ Jira API Error:', data.errorMessages);
+      console.log(`Jira Response for ${assignee}:`, JSON.stringify(data));
+
+      if (data.errorMessages && data.errorMessages.length > 0) {
+        console.error('Jira API Error:', data.errorMessages);
         return 0;
       }
 
+      if (data.warningMessages && data.warningMessages.length > 0) {
+        console.warn('Jira API Warning:', data.warningMessages);
+      }
+
+      console.log(`Found tasks: ${data.total}`);
       return data.total ?? 0;
     } catch (error) {
-      console.error('❌ Network Error:', error);
+      console.error('Network Error:', error);
       return 0;
     }
   }
