@@ -53,7 +53,11 @@ export class BotUpdate {
 
     if (!jiraName) {
       return ctx.reply(
-        'Please provide your name as in Jira. Example: `/link Evgeniy Martynenko`',
+        'Please provide your Jira name or email.\n' +
+          'Examples:\n' +
+          '`/link Evgeniy Martynenko`\n' +
+          '`/link e.martynenko@company.com`\n' +
+          '`/link Evgeniy Martynenko|e.martynenko@company.com` — both at once',
       );
     }
 
@@ -105,7 +109,16 @@ export class BotUpdate {
       : `${domain}.atlassian.net`;
     const url = `https://${baseUrl}/rest/api/3/search/jql`;
 
-    const jql = `assignee ~ "${assignee}" AND status IN ("In Progress", "Ready for qa", "Ready for QA", "READY FOR QA")`;
+    const statusFilter = `status IN ("In Progress", "Ready for QA")`;
+    const parts = assignee
+      .split('|')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const assigneeCondition =
+      parts.length > 1
+        ? `(${parts.map((p) => `assignee = "${p}"`).join(' OR ')})`
+        : `assignee = "${parts[0]}"`;
+    const jql = `${assigneeCondition} AND ${statusFilter}`;
 
     try {
       const response = await fetch(url, {
