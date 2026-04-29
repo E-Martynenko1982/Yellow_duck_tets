@@ -78,25 +78,30 @@ export class BotUpdate {
 
   @Hears('Report')
   async onReport(@Ctx() ctx: Context) {
-    await ctx.reply('Fetching data from Jira...');
+    try {
+      await ctx.reply('Fetching data from Jira...');
 
-    const users = await this.userRepository.find();
-    const linkedUsers = users.filter((u) => u.jiraName);
+      const users = await this.userRepository.find();
+      const linkedUsers = users.filter((u) => u.jiraName);
 
-    if (linkedUsers.length === 0) {
-      return ctx.reply(
-        'No members have linked their accounts yet. Use `/link`.',
-      );
+      if (linkedUsers.length === 0) {
+        return ctx.reply(
+          'No members have linked their accounts yet. Use /link.',
+        );
+      }
+
+      let report = '<b>Team workload:</b>\n\n';
+
+      for (const user of linkedUsers) {
+        const count = await this.getJiraTasks(user.jiraName);
+        report += `<b>${user.jiraName}</b> (${user.firstName})\n- In progress: <b>${count}</b> tasks\n\n`;
+      }
+
+      await ctx.reply(report, { parse_mode: 'HTML' });
+    } catch (error) {
+      console.error('Render Report Error:', error);
+      await ctx.reply('Error displaying report. Check logs.');
     }
-
-    let report = '**Team workload:**\n\n';
-
-    for (const user of linkedUsers) {
-      const count = await this.getJiraTasks(user.jiraName);
-      report += `**${user.jiraName}** (${user.firstName})\n- In progress: **${count}** tasks\n\n`;
-    }
-
-    await ctx.reply(report, { parse_mode: 'Markdown' });
   }
 
   private async getJiraTasks(assignee: string): Promise<number> {
