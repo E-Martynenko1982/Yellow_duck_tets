@@ -32,6 +32,7 @@ interface JiraUser {
 }
 
 interface JiraWebhookPayload {
+  webhookEvent?: string;
   issue?: JiraIssue;
   changelog?: JiraChangelog;
   user?: JiraUser;
@@ -48,8 +49,18 @@ export class JiraController {
   async handleWebhook(@Body() data: JiraWebhookPayload) {
     const issue = data.issue;
     const changelog = data.changelog;
+    const webhookEvent = data.webhookEvent;
 
     if (!issue) return { status: 'no issue data' };
+    if (
+      webhookEvent &&
+      !['jira:issue_updated', 'jira:issue_created'].includes(webhookEvent)
+    ) {
+      return { status: 'ignored' };
+    }
+    if (webhookEvent === 'jira:issue_updated' && !changelog?.items?.length) {
+      return { status: 'no changes' };
+    }
 
     const issueKey = issue.key;
     const summary = issue.fields.summary;
