@@ -35,6 +35,9 @@ import { User } from './users/user.entity';
         middlewares: [
           new LocalSession({ database: 'sessions.json' }).middleware(),
         ],
+        launchOptions: {
+          dropPendingUpdates: true,
+        },
       }),
       inject: [ConfigService],
     }),
