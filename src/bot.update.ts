@@ -146,7 +146,12 @@ export class BotUpdate {
         errorMessages?: string[];
       };
 
-      console.log(`🔍 Трасування для ${assignee}:`, JSON.stringify(data));
+      console.log(
+        `Трасування для ${assignee}:`,
+        (data.issues as { key: string }[] | undefined)
+          ?.map((i) => i.key)
+          .join(', '),
+      );
 
       if (data.errorMessages && data.errorMessages.length > 0) {
         console.error('Помилка Jira:', data.errorMessages);
