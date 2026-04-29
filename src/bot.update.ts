@@ -161,8 +161,13 @@ export class BotUpdate {
 
       const issues = data.issues ?? [];
 
+      const uniqueStatuses = [
+        ...new Set(issues.map((i) => i.fields.status.name)),
+      ];
+      console.log(`[${assignee}] Total issues returned: ${issues.length}`);
+      console.log(`[${assignee}] Unique statuses from Jira:`, uniqueStatuses);
       console.log(
-        `Tasks for ${assignee}:`,
+        `[${assignee}] Issues:`,
         issues.map((i) => `${i.key} [${i.fields.status.name}]`).join(', '),
       );
 
