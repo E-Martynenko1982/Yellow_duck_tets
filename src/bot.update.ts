@@ -109,7 +109,7 @@ export class BotUpdate {
       : `${domain}.atlassian.net`;
     const url = `https://${baseUrl}/rest/api/3/search/jql`;
 
-    const statusFilter = `status IN ("In Progress", "Ready for QA")`;
+    const statusFilter = `status IN ("In Progress", "Ready for QA", "Ready for qa")`;
     const parts = assignee
       .split('|')
       .map((s) => s.trim())
