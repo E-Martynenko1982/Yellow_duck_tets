@@ -93,8 +93,13 @@ export class BotUpdate {
       let report = '<b>Team workload:</b>\n\n';
 
       for (const user of linkedUsers) {
-        const count = await this.getJiraTasks(user.jiraName);
-        report += `<b>${user.jiraName}</b> (${user.firstName})\n- In progress: <b>${count}</b> tasks\n\n`;
+        const stats = await this.getJiraTasks(user.jiraName);
+        const total = stats.inProgress + stats.readyForQA + stats.done;
+        report += `<b>${user.jiraName}</b> (${user.firstName})\n`;
+        report += `In Progress: <b>${stats.inProgress}</b>\n`;
+        report += `Ready for QA: <b>${stats.readyForQA}</b>\n`;
+        report += `Done: <b>${stats.done}</b>\n`;
+        report += `Total: <b>${total}</b>\n\n`;
       }
 
       await ctx.reply(report, { parse_mode: 'HTML' });
@@ -104,7 +109,11 @@ export class BotUpdate {
     }
   }
 
-  private async getJiraTasks(assignee: string): Promise<number> {
+  private async getJiraTasks(
+    assignee: string,
+  ): Promise<{ inProgress: number; readyForQA: number; done: number }> {
+    const empty = { inProgress: 0, readyForQA: 0, done: 0 };
+
     const domain = this.configService.get<string>('JIRA_DOMAIN') ?? '';
     const email = this.configService.get<string>('JIRA_EMAIL');
     const token = this.configService.get<string>('JIRA_API_TOKEN');
@@ -114,7 +123,7 @@ export class BotUpdate {
       : `${domain}.atlassian.net`;
     const url = `https://${baseUrl}/rest/api/3/search/jql`;
 
-    const statusFilter = `status IN ("In Progress", "Ready for QA", "Ready for qa")`;
+    const statusFilter = `status IN ("In Progress", "Ready for QA", "Done")`;
     const parts = assignee
       .split('|')
       .map((s) => s.trim())
@@ -134,41 +143,46 @@ export class BotUpdate {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          jql: jql,
-          maxResults: 50,
+          jql,
+          maxResults: 100,
           fields: ['status'],
         }),
       });
 
       const data = (await response.json()) as {
-        total?: number;
-        issues?: any[];
+        issues?: { key: string; fields: { status: { name: string } } }[];
         errorMessages?: string[];
       };
 
-      console.log(
-        `Трасування для ${assignee}:`,
-        (data.issues as { key: string }[] | undefined)
-          ?.map((i) => i.key)
-          .join(', '),
-      );
-
       if (data.errorMessages && data.errorMessages.length > 0) {
-        console.error('Помилка Jira:', data.errorMessages);
-        return 0;
+        console.error('Jira error:', data.errorMessages);
+        return empty;
       }
 
-      const count: number =
-        data.total !== undefined
-          ? data.total
-          : data.issues
-            ? data.issues.length
-            : 0;
+      const issues = data.issues ?? [];
 
-      return count;
+      console.log(
+        `Tasks for ${assignee}:`,
+        issues.map((i) => `${i.key} [${i.fields.status.name}]`).join(', '),
+      );
+
+      const result = { inProgress: 0, readyForQA: 0, done: 0 };
+
+      for (const issue of issues) {
+        const status = issue.fields.status.name.toLowerCase();
+        if (status === 'in progress') {
+          result.inProgress++;
+        } else if (status === 'ready for qa') {
+          result.readyForQA++;
+        } else if (status === 'done') {
+          result.done++;
+        }
+      }
+
+      return result;
     } catch (error) {
-      console.error('Помилка мережі:', error);
-      return 0;
+      console.error('Network error:', error);
+      return empty;
     }
   }
 }
